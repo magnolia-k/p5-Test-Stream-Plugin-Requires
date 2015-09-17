@@ -11,8 +11,6 @@ no Test::Stream::Exporter;
 
 use Test::Stream::Context qw/context/;
 
-use Carp qw/confess/;
-
 sub test_requires {
     my ( $mod, $ver, $caller ) = @_;
     return if $mod eq __PACKAGE__;
@@ -27,18 +25,19 @@ sub test_requires {
 
     my $e;
     my $skip_all;
+
     if ($e = $@) {
         $skip_all = sub {
             my $state = $ctx->hub->state;
-            my $hub = Test::Stream::Sync->stack->top;
-            if (! $hub->state->plan) {
+            if (! $state->plan) {
                 $ctx->plan(0, SKIP => @_);
             } else {
-                for (1..$hub->state->plan) {
+                for (1..$state->plan) {
                     $ctx->debug->set_skip(@_);
                     $ctx->ok(1, "skipped test");
                     $ctx->debug->set_skip(undef);
                 }
+                my $hub = Test::Stream::Sync->stack->top;
             }
         };
     }
@@ -48,9 +47,16 @@ sub test_requires {
         $msg = "Test requires module '$mod' but it's not found";
     }
 
-    $skip_all->($msg);
+    if ($ENV{RELEASE_TESTING}) {
+        my $ctx = context();
+        $ctx->bail($msg);
+        $ctx->release if $ctx;
+    } else {
+        $skip_all->($msg);
+    }
 
     $ctx->release;
+
     return 1;
 }
 
