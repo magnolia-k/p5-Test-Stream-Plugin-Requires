@@ -23,40 +23,23 @@ sub test_requires {
 
     eval qq{package $caller; use $mod $ver}; ## no critic.
 
+    my $ctx = context();
+
     my $e;
     my $skip_all;
     if ($e = $@) {
         $skip_all = sub {
-            my $ctx = context();
             my $state = $ctx->hub->state;
-            if (! $state->plan) {
+            my $hub = Test::Stream::Sync->stack->top;
+            if (! $hub->state->plan) {
                 $ctx->plan(0, SKIP => @_);
-            } elsif ($state->plan eq "no_plan") {
-                $ctx->plan(0, SKIP => @_);
-                
-                my $stack = $ctx->stack;
-                $ctx->release;
-                if (@{$stack} >= 2) {
-                    confess "Can't use test_requires in subtest!!";
-                }
-
-                exit 0;
             } else {
-                for (1..$state->plan) {
+                for (1..$hub->state->plan) {
                     $ctx->debug->set_skip(@_);
                     $ctx->ok(1, "skipped test");
                     $ctx->debug->set_skip(undef);
                 }
-
-                my $stack = $ctx->stack;
-                $ctx->release;
-                if (@{$stack} >= 2) {
-                    confess "Can't use test_requires in subtest!!";
-                }
-
-                exit 0;
             }
-
         };
     }
 
@@ -67,6 +50,7 @@ sub test_requires {
 
     $skip_all->($msg);
 
+    $ctx->release;
     return 1;
 }
 
