@@ -104,4 +104,8 @@ Test::Stream::Plugin::Requires - Test::Requires for Test::Stream
 
   test_requires("JSON");
 
+=head1 NOTE
+
+Inspired to tokuhiroum's Test::Requires.
+
 =cut
