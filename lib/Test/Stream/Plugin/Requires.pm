@@ -98,4 +98,10 @@ __END__
 
 Test::Stream::Plugin::Requires - Test::Requires for Test::Stream
 
+=head1 SYNOPSIS
+
+  use Test::Stream( "-V1", "Requires" );
+
+  test_requires("JSON");
+
 =cut
