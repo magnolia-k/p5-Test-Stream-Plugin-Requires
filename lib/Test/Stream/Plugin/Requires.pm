@@ -94,4 +94,8 @@ __END__
 
 =encoding UTF-8
 
+=head1 NAME
+
+Test::Stream::Plugin::Requires - Test::Requires for Test::Stream
+
 =cut
