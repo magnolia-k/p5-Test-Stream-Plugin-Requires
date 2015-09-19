@@ -11,6 +11,24 @@ no Test::Stream::Exporter;
 
 use Test::Stream::Context qw/context/;
 
+sub load_ts_plugin {
+    my $class = shift;
+
+    my ($caller, @args) = @_;
+
+    Test::Stream::Exporter::export_from($class, $caller->[0], ['test_requires']);
+
+    if (@args == 1 && ref $args[0] && ref $args[0] eq 'HASH' ) {
+        while ( my ($mod, $ver) = each %{$args[0]} ) {
+            test_requires($mod, $ver, $caller->[0]);
+        }
+    } else {
+        for my $mod (@args) {
+            test_requires($mod, undef, $caller->[0]);
+        }
+    }
+}
+
 sub test_requires {
     my ( $mod, $ver, $caller ) = @_;
     return if $mod eq __PACKAGE__;
@@ -29,6 +47,7 @@ sub test_requires {
     if ($e = $@) {
         $skip_all = sub {
             my $state = $ctx->hub->state;
+
             if (! $state->plan) {
                 $ctx->plan(0, SKIP => @_);
             } else {
@@ -37,24 +56,31 @@ sub test_requires {
                     $ctx->ok(1, "skipped test");
                     $ctx->debug->set_skip(undef);
                 }
+
                 my $hub = Test::Stream::Sync->stack->top;
+                if ($hub->can("nested")) {
+                    die;
+                }
+
+                $ctx->release;
+                exit 0;
             }
         };
-    }
 
-    my $msg = "$e";
-    if ( $e =~ /^Can't locate/ ) {
-        $msg = "Test requires module '$mod' but it's not found";
-    }
+        my $msg = "$e";
+        if ( $e =~ /^Can't locate/ ) {
+            $msg = "Test requires module '$mod' but it's not found";
+        }
 
-    if ($ENV{RELEASE_TESTING}) {
-        my $ctx = context();
-        $ctx->bail($msg);
-        $ctx->release if $ctx;
-    } else {
-        $skip_all->($msg);
-    }
+        if ($ENV{RELEASE_TESTING}) {
+            my $ctx = context();
+            $ctx->bail($msg);
+        } else {
+            $skip_all->($msg);
+        }
 
+    }
+    
     $ctx->release;
 
     return 1;
